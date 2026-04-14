@@ -26,14 +26,19 @@ jobs:
           pip install --upgrade pip
           pip install flet[all]
 
-      - name: Build APK (Auto-Confirm)
+      - name: Build APK
         run: |
-          # هذا هو السطر المعدل الذي سيحل مشكلة الشاشة البيضاء بإذن الله
+          # تنظيف أي ملفات مؤقتة قديمة قد تسبب تعارضاً
+          rm -rf build/
+          rm -rf .flet/
+          
+          # أمر البناء المباشر مع الصلاحيات وتخطي الأسئلة
+          # لاحظ أننا أزلنا أمر "flet create" لتجنب مسح كودك الأصلي
           yes y | flet build apk --permissions INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE --verbose
 
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Asala-App-V1
+          name: Asala-App-Official
           path: build/apk/*.apk
