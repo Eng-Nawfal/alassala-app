@@ -6,45 +6,124 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.rtl = True
     page.padding = 20
-    
+    page.scroll = ft.ScrollMode.AUTO
+
+    # --- مخزن البيانات المؤقت (لضمان العمل قبل ربط قاعدة البيانات الخارجية) ---
+    sections = ["القدرة والآلات", "المتحكمات الدقيقة", "البحوث الطلابية"]
+    inventory = [
+        {"item": "AVR Card SX460", "section": "القدرة والآلات", "qty": "5"},
+        {"item": "ESP32 DevKit", "section": "المتحكمات الدقيقة", "qty": "10"}
+    ]
+
     def handle_exception():
         error_details = traceback.format_exc()
         page.clean()
-        page.add(ft.Text(f"خطأ تقني: {error_details}", color="red"))
+        page.add(ft.Text(f"خطأ في النظام: {error_details}", color="red"))
 
     try:
-        # --- الأقسام ---
+        # --- وظائف التحديث ---
+        def update_ui():
+            render_inventory()
+            render_sections()
+            page.update()
+
+        # --- 1. قسم الجرد ---
+        item_name = ft.TextField(label="اسم المادة", expand=True)
+        item_qty = ft.TextField(label="الكمية", width=100)
+        item_section = ft.Dropdown(label="القسم", options=[ft.dropdown.Option(s) for s in sections], expand=True)
+
+        def add_item_to_inv(e):
+            if item_name.value and item_section.value:
+                inventory.append({"item": item_name.value, "section": item_section.value, "qty": item_qty.value})
+                item_name.value = ""
+                item_qty.value = ""
+                update_ui()
+
+        inventory_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("المادة")),
+                ft.DataColumn(ft.Text("القسم")),
+                ft.DataColumn(ft.Text("الكمية")),
+                ft.DataColumn(ft.Text("إجراء")),
+            ],
+            rows=[]
+        )
+
+        def render_inventory():
+            inventory_table.rows.clear()
+            for i, data in enumerate(inventory):
+                inventory_table.rows.append(
+                    ft.DataRow(cells=[
+                        ft.DataCell(ft.Text(data["item"])),
+                        ft.DataCell(ft.Text(data["section"])),
+                        ft.DataCell(ft.Text(data["qty"])),
+                        ft.DataCell(ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="red", on_click=lambda e, idx=i: delete_item(idx))),
+                    ])
+                )
+
+        def delete_item(idx):
+            inventory.pop(idx)
+            update_ui()
+
         inventory_view = ft.Column([
-            ft.Text("قائمة الجرد الهندسي", size=20, weight="bold"),
-            ft.DataTable(
-                columns=[
-                    ft.DataColumn(ft.Text("المادة")),
-                    ft.DataColumn(ft.Text("الكمية")),
-                ],
-                rows=[
-                    ft.DataRow(cells=[ft.DataCell(ft.Text("AVR Card")), ft.DataCell(ft.Text("5"))]),
-                ],
-            ),
-            ft.FloatingActionButton(icon=ft.Icons.ADD) 
+            ft.Text("إدارة جرد المواد", size=20, weight="bold"),
+            ft.Row([item_name, item_qty]),
+            ft.Row([item_section, ft.ElevatedButton("إضافة للجرد", icon=ft.Icons.ADD, on_click=add_item_to_inv)]),
+            ft.Divider(),
+            inventory_table
         ], visible=True)
 
+        # --- 2. قسم الاستعلام ---
+        search_query = ft.TextField(label="ابحث عن مادة أو قسم...", prefix_icon=ft.Icons.SEARCH, on_change=lambda e: run_search(e.control.value))
+        search_results = ft.Column()
+
+        def run_search(val):
+            search_results.controls.clear()
+            if val:
+                for res in inventory:
+                    if val.lower() in res["item"].lower() or val in res["section"]:
+                        search_results.controls.append(ft.ListTile(title=ft.Text(res["item"]), subtitle=ft.Text(f"القسم: {res['section']} | الكمية: {res['qty']}")))
+            page.update()
+
         query_view = ft.Column([
-            ft.Text("نظام الاستعلام", size=20, weight="bold"),
-            ft.TextField(label="بحث...", prefix_icon=ft.Icons.SEARCH),
+            ft.Text("محرك الاستعلام السريع", size=20, weight="bold"),
+            search_query,
+            search_results
         ], visible=False)
+
+        # --- 3. قسم إدارة الأقسام ---
+        new_section_name = ft.TextField(label="اسم القسم الجديد", expand=True)
+        sections_list = ft.Column()
+
+        def add_new_section(e):
+            if new_section_name.value:
+                sections.append(new_section_name.value)
+                item_section.options.append(ft.dropdown.Option(new_section_name.value))
+                new_section_name.value = ""
+                update_ui()
+
+        def render_sections():
+            sections_list.controls.clear()
+            for s in sections:
+                sections_list.controls.append(ft.ListTile(leading=ft.Icon(ft.Icons.CHIP), title=ft.Text(s)))
+
+        render_sections()
+        render_inventory()
 
         settings_view = ft.Column([
-            ft.Text("الإعدادات", size=20, weight="bold"),
-            ft.ListTile(title=ft.Text("بيانات المكتب")),
+            ft.Text("إدارة أقسام المكتب", size=20, weight="bold"),
+            ft.Row([new_section_name, ft.ElevatedButton("إضافة قسم", on_click=add_new_section)]),
+            ft.Divider(),
+            sections_list
         ], visible=False)
 
+        # --- نظام التنقل ---
         def navigate(e):
             inventory_view.visible = (e.control.selected_index == 0)
             query_view.visible = (e.control.selected_index == 1)
             settings_view.visible = (e.control.selected_index == 2)
             page.update()
 
-        # التعديل هنا: استخدمنا المسمى الجديد NavigationBarDestination
         page.navigation_bar = ft.NavigationBar(
             destinations=[
                 ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="الجرد"),
@@ -57,10 +136,10 @@ def main(page: ft.Page):
         page.add(
             ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.PRECISION_MANUFACTURING, color="blue900"),
-                    ft.Text("معرض ملاك ", size=25, weight="bold", color="blue900"),
+                    ft.Icon(ft.Icons.PRECISION_MANUFACTURING, color="blue900", size=30),
+                    ft.Text("معرض ملاك للتجهيزات الكهربائية", size=25, weight="bold", color="blue900"),
                 ], alignment="center"),
-                ft.Divider(height=10),
+                ft.Divider(),
                 inventory_view,
                 query_view,
                 settings_view
