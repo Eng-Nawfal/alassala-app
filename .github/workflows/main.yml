@@ -1,4 +1,3 @@
-
 name: Build Android APK
 on:
   push:
@@ -19,22 +18,22 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Dependencies
+      - name: Install Flet
         run: |
+          pip install --upgrade pip
           pip install flet[all]
-          # في حال وجود ملف requirements.txt
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Build APK
+      - name: Build APK (Auto-Confirm)
         run: |
-          # إضافة --no-version-check لتجنب توقف البناء بسبب تحديثات فليت المفاجئة
-          flet build apk --verbose
+          # هذا هو السطر المعدل الذي سيحل مشكلة الشاشة البيضاء بإذن الله
+          yes y | flet build apk --permissions INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE --verbose
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Asala-App-Final
+          name: Asala-App-V1
           path: build/apk/*.apk
