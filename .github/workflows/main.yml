@@ -28,8 +28,13 @@ jobs:
 
       - name: Build APK
         run: |
-          # تنفيذ البناء مع الصلاحيات الصحيحة تقنياً لنظام أندرويد
-          flet build apk --yes --android-permissions android.permission.INTERNET,android.permission.WRITE_EXTERNAL_STORAGE,android.permission.READ_EXTERNAL_STORAGE --verbose
+          # تنظيف أي مخلفات سابقة
+          rm -rf build/
+          rm -rf .flet/
+          
+          # البناء باستخدام الأمر الرسمي البسيط
+          # وسم --yes يضمن تثبيت Flutter تلقائياً
+          flet build apk --yes --verbose
 
       - name: Upload APK
         if: success()
