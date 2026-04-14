@@ -13,35 +13,29 @@ def main(page: ft.Page):
         page.add(ft.Text(f"خطأ تقني: {error_details}", color="red"))
 
     try:
-        # --- قسم الجرد ---
+        # --- الأقسام ---
         inventory_view = ft.Column([
             ft.Text("قائمة الجرد الهندسي", size=20, weight="bold"),
             ft.DataTable(
                 columns=[
                     ft.DataColumn(ft.Text("المادة")),
                     ft.DataColumn(ft.Text("الكمية")),
-                    ft.DataColumn(ft.Text("الحالة")),
                 ],
                 rows=[
-                    ft.DataRow(cells=[ft.DataCell(ft.Text("AVR Card")), ft.DataCell(ft.Text("5")), ft.DataCell(ft.Text("متوفر"))]),
-                    ft.DataRow(cells=[ft.DataCell(ft.Text("ESP32")), ft.DataCell(ft.Text("12")), ft.DataCell(ft.Text("قيد الاستخدام"))]),
+                    ft.DataRow(cells=[ft.DataCell(ft.Text("AVR Card")), ft.DataCell(ft.Text("5"))]),
                 ],
             ),
-            # تم تصحيح هذا السطر بحذف ارجيومنت text
             ft.FloatingActionButton(icon=ft.Icons.ADD) 
         ], visible=True)
 
-        # --- قسم الاستعلام ---
         query_view = ft.Column([
-            ft.Text("نظام الاستعلام عن المشاريع", size=20, weight="bold"),
-            ft.TextField(label="أدخل رقم المشروع أو اسم الطالب", prefix_icon=ft.Icons.SEARCH),
-            ft.ElevatedButton("بحث سريع", icon=ft.Icons.SEARCH_SHARP),
+            ft.Text("نظام الاستعلام", size=20, weight="bold"),
+            ft.TextField(label="بحث...", prefix_icon=ft.Icons.SEARCH),
         ], visible=False)
 
-        # --- قسم الأقسام ---
         settings_view = ft.Column([
-            ft.Text("إدارة الأقسام", size=20, weight="bold"),
-            ft.ListTile(leading=ft.Icon(ft.Icons.PERSON), title=ft.Text("بيانات المهندسين")),
+            ft.Text("الإعدادات", size=20, weight="bold"),
+            ft.ListTile(title=ft.Text("بيانات المكتب")),
         ], visible=False)
 
         def navigate(e):
@@ -50,11 +44,12 @@ def main(page: ft.Page):
             settings_view.visible = (e.control.selected_index == 2)
             page.update()
 
+        # التعديل هنا: استخدمنا المسمى الجديد NavigationBarDestination
         page.navigation_bar = ft.NavigationBar(
             destinations=[
-                ft.NavigationDestination(icon=ft.Icons.INVENTORY_2, label="الجرد"),
-                ft.NavigationDestination(icon=ft.Icons.QUERY_STATS, label="استعلام"),
-                ft.NavigationDestination(icon=ft.Icons.SETTINGS, label="الأقسام"),
+                ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="الجرد"),
+                ft.NavigationBarDestination(icon=ft.Icons.SEARCH, label="استعلام"),
+                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="الأقسام"),
             ],
             on_change=navigate,
         )
