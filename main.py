@@ -2,7 +2,7 @@ import flet as ft
 import traceback
 
 def main(page: ft.Page):
-    page.title = "نظام مكتب الأصالة للهندسة"
+    page.title = "معرض ملاك"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.rtl = True
     page.padding = 15
@@ -48,7 +48,7 @@ def main(page: ft.Page):
                 )
 
         sections_view = ft.Column([
-            ft.Text("إدارة الأقسام الهندسية", size=20, weight="bold"),
+            ft.Text("إدارة الخزين", size=20, weight="bold"),
             ft.Row([new_sec_name, ft.ElevatedButton("إضافة قسم", on_click=add_sec)]),
             ft.Divider(),
             sec_list_column
