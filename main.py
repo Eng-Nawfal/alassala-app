@@ -5,122 +5,156 @@ def main(page: ft.Page):
     page.title = "نظام مكتب الأصالة للهندسة"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.rtl = True
-    page.padding = 20
+    page.padding = 15
     page.scroll = ft.ScrollMode.AUTO
 
-    # بيانات تجريبية
-    sections = ["القدرة والآلات", "المتحكمات الدقيقة", "البحوث الطلابية"]
+    # --- مخزن البيانات الشامل ---
+    sections = ["القدرة والآلات", "مكونات إلكترونية"]
     inventory = [
-        {"item": "AVR Card SX460", "section": "القدرة والآلات", "qty": "5"},
-        {"item": "ESP32 DevKit", "section": "المتحكمات الدقيقة", "qty": "10"}
+        {"item": "AVR SX460", "section": "القدرة والآلات", "qty": "10", "buy": "15000", "sell": "25000"},
     ]
 
     def handle_exception():
-        error_details = traceback.format_exc()
+        err = traceback.format_exc()
         page.clean()
-        page.add(ft.Text(f"خطأ في النظام: {error_details}", color="red"))
+        page.add(ft.Text(f"خطأ تقني: {err}", color="red"))
 
     try:
-        def update_ui():
+        def update_all():
             render_inventory()
             render_sections()
+            item_section.options = [ft.dropdown.Option(s) for s in sections]
             page.update()
 
-        # --- 1. قسم الجرد ---
-        item_name = ft.TextField(label="اسم المادة", expand=True)
-        item_qty = ft.TextField(label="الكمية", width=100)
-        item_section = ft.Dropdown(label="القسم", options=[ft.dropdown.Option(s) for s in sections], expand=True)
+        # --- 1. واجهة إدارة الأقسام ---
+        new_sec_name = ft.TextField(label="اسم القسم الجديد", expand=True)
+        sec_list_column = ft.Column()
 
-        inventory_table = ft.DataTable(
+        def add_sec(e):
+            if new_sec_name.value:
+                sections.append(new_sec_name.value)
+                new_sec_name.value = ""
+                update_all()
+
+        def del_sec(s_name):
+            if s_name in sections:
+                sections.remove(s_name)
+                update_all()
+
+        def render_sections():
+            sec_list_column.controls.clear()
+            for s in sections:
+                sec_list_column.controls.append(
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.FOLDER),
+                        title=ft.Text(s),
+                        trailing=ft.IconButton(ft.Icons.DELETE, icon_color="red", on_click=lambda e, n=s: del_sec(n))
+                    )
+                )
+
+        sections_view = ft.Column([
+            ft.Text("إدارة الأقسام الهندسية", size=20, weight="bold"),
+            ft.Row([new_sec_name, ft.ElevatedButton("إضافة قسم", on_click=add_sec)]),
+            ft.Divider(),
+            sec_list_column
+        ], visible=False)
+
+        # --- 2. واجهة الجرد (إضافة وتعديل مادة) ---
+        item_name = ft.TextField(label="اسم المادة", expand=2)
+        item_qty = ft.TextField(label="الكمية", expand=1, keyboard_type="number")
+        item_buy = ft.TextField(label="سعر الشراء", expand=1, keyboard_type="number")
+        item_sell = ft.TextField(label="سعر البيع", expand=1, keyboard_type="number")
+        item_section = ft.Dropdown(label="القسم", expand=2, options=[ft.dropdown.Option(s) for s in sections])
+        
+        editing_index = None # لتحديد ما إذا كنا نعدل مادة أم نضيف جديدة
+
+        def save_item(e):
+            nonlocal editing_index
+            if all([item_name.value, item_section.value, item_qty.value]):
+                data = {
+                    "item": item_name.value, "section": item_section.value,
+                    "qty": item_qty.value, "buy": item_buy.value, "sell": item_sell.value
+                }
+                if editing_index is None:
+                    inventory.append(data)
+                else:
+                    inventory[editing_index] = data
+                    editing_index = None
+                    btn_save.text = "إضافة للمخزن"
+                
+                # تصفير الحقول
+                item_name.value = item_qty.value = item_buy.value = item_sell.value = ""
+                update_all()
+
+        btn_save = ft.ElevatedButton("إضافة للمخزن", icon=ft.Icons.SAVE, on_click=save_item)
+        inv_table = ft.DataTable(
             columns=[
-                ft.DataColumn(ft.Text("المادة")),
-                ft.DataColumn(ft.Text("القسم")),
-                ft.DataColumn(ft.Text("الكمية")),
-                ft.DataColumn(ft.Text("حذف")),
+                ft.DataColumn(ft.Text("المادة")), ft.DataColumn(ft.Text("القسم")),
+                ft.DataColumn(ft.Text("الكمية")), ft.DataColumn(ft.Text("شراء")),
+                ft.DataColumn(ft.Text("بيع")), ft.DataColumn(ft.Text("إجراء")),
             ],
             rows=[]
         )
 
+        def edit_item(idx):
+            nonlocal editing_index
+            editing_index = idx
+            item = inventory[idx]
+            item_name.value, item_section.value = item["item"], item["section"]
+            item_qty.value, item_buy.value, item_sell.value = item["qty"], item["buy"], item["sell"]
+            btn_save.text = "تحديث البيانات"
+            page.update()
+
         def render_inventory():
-            inventory_table.rows.clear()
-            for i, data in enumerate(inventory):
-                inventory_table.rows.append(
-                    ft.DataRow(cells=[
-                        ft.DataCell(ft.Text(data["item"])),
-                        ft.DataCell(ft.Text(data["section"])),
-                        ft.DataCell(ft.Text(data["qty"])),
-                        ft.DataCell(ft.IconButton(ft.Icons.DELETE, icon_color="red", on_click=lambda e, idx=i: delete_item(idx))),
-                    ])
-                )
-
-        def add_item_to_inv(e):
-            if item_name.value and item_section.value:
-                inventory.append({"item": item_name.value, "section": item_section.value, "qty": item_qty.value})
-                item_name.value = ""
-                item_qty.value = ""
-                update_ui()
-
-        def delete_item(idx):
-            inventory.pop(idx)
-            update_ui()
+            inv_table.rows.clear()
+            for i, d in enumerate(inventory):
+                inv_table.rows.append(ft.DataRow(cells=[
+                    ft.DataCell(ft.Text(d["item"])), ft.DataCell(ft.Text(d["section"])),
+                    ft.DataCell(ft.Text(d["qty"])), ft.DataCell(ft.Text(d["buy"])),
+                    ft.DataCell(ft.Text(d["sell"])),
+                    ft.DataCell(ft.Row([
+                        ft.IconButton(ft.Icons.EDIT, icon_color="blue", on_click=lambda e, idx=i: edit_item(idx)),
+                        ft.IconButton(ft.Icons.DELETE, icon_color="red", on_click=lambda e, idx=i: [inventory.pop(idx), update_all()]),
+                    ]))
+                ]))
 
         inventory_view = ft.Column([
-            ft.Text("إدارة جرد المواد", size=20, weight="bold"),
-            ft.Row([item_name, item_qty]),
-            ft.Row([item_section, ft.ElevatedButton("إضافة", icon=ft.Icons.ADD, on_click=add_item_to_inv)]),
+            ft.Text("إدارة خزين المواد", size=20, weight="bold"),
+            ft.Row([item_name, item_section]),
+            ft.Row([item_qty, item_buy, item_sell]),
+            btn_save,
             ft.Divider(),
-            inventory_table
+            ft.Container(content=inv_table, scroll=ft.ScrollMode.ALWAYS)
         ], visible=True)
 
-        # --- 2. قسم الاستعلام ---
-        search_query = ft.TextField(label="ابحث هنا...", prefix_icon=ft.Icons.SEARCH, on_change=lambda e: run_search(e.control.value))
-        search_results = ft.Column()
+        # --- 3. واجهة الاستعلام ---
+        search_field = ft.TextField(label="بحث عن مادة (الاسم أو القسم)...", prefix_icon=ft.Icons.SEARCH, on_change=lambda e: run_query(e.control.value))
+        query_results = ft.Column()
 
-        def run_search(val):
-            search_results.controls.clear()
-            if val:
-                for res in inventory:
-                    if val.lower() in res["item"].lower() or val in res["section"]:
-                        search_results.controls.append(ft.ListTile(title=ft.Text(res["item"]), subtitle=ft.Text(f"القسم: {res['section']}")))
+        def run_query(val):
+            query_results.controls.clear()
+            for d in inventory:
+                if val.lower() in d["item"].lower() or val in d["section"]:
+                    query_results.controls.append(
+                        ft.Card(content=ft.ListTile(
+                            title=ft.Text(f"{d['item']} - القسم: {d['section']}"),
+                            subtitle=ft.Text(f"الكمية: {d['qty']} | شراء: {d['buy']} | بيع: {d['sell']}")
+                        ))
+                    )
             page.update()
 
         query_view = ft.Column([
-            ft.Text("محرك البحث", size=20, weight="bold"),
-            search_query,
-            search_results
+            ft.Text("محرك الاستعلام عن المواد", size=20, weight="bold"),
+            search_field,
+            query_results
         ], visible=False)
 
-        # --- 3. قسم الأقسام ---
-        new_section_name = ft.TextField(label="اسم القسم الجديد", expand=True)
-        sections_list = ft.Column()
-
-        def add_new_section(e):
-            if new_section_name.value:
-                sections.append(new_section_name.value)
-                item_section.options.append(ft.dropdown.Option(new_section_name.value))
-                new_section_name.value = ""
-                update_ui()
-
-        def render_sections():
-            sections_list.controls.clear()
-            for s in sections:
-                # استبدلنا CHIP بـ SETTINGS لضمان العمل
-                sections_list.controls.append(ft.ListTile(leading=ft.Icon(ft.Icons.SETTINGS), title=ft.Text(s)))
-
-        render_sections()
-        render_inventory()
-
-        settings_view = ft.Column([
-            ft.Text("إدارة الأقسام", size=20, weight="bold"),
-            ft.Row([new_section_name, ft.ElevatedButton("إضافة", on_click=add_new_section)]),
-            ft.Divider(),
-            sections_list
-        ], visible=False)
-
+        # --- التنقل والشريط السفلي ---
         def navigate(e):
-            inventory_view.visible = (e.control.selected_index == 0)
-            query_view.visible = (e.control.selected_index == 1)
-            settings_view.visible = (e.control.selected_index == 2)
+            idx = e.control.selected_index
+            inventory_view.visible = (idx == 0)
+            query_view.visible = (idx == 1)
+            sections_view.visible = (idx == 2)
             page.update()
 
         page.navigation_bar = ft.NavigationBar(
@@ -133,17 +167,11 @@ def main(page: ft.Page):
         )
 
         page.add(
-            ft.Column([
-                ft.Row([
-                    ft.Icon(ft.Icons.BUILD, color="blue900"), # أيقونة BUILD مضمونة
-                    ft.Text("مكتب الأصالة للهندسة", size=25, weight="bold", color="blue900"),
-                ], alignment="center"),
-                ft.Divider(),
-                inventory_view,
-                query_view,
-                settings_view
-            ])
+            ft.Row([ft.Text("معرض ملاك للكهربائيات", size=25, weight="bold", color="blue900")], alignment="center"),
+            ft.Divider(),
+            inventory_view, query_view, sections_view
         )
+        update_all()
 
     except Exception:
         handle_exception()
