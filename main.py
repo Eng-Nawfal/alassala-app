@@ -2,53 +2,89 @@ import flet as ft
 import traceback
 
 def main(page: ft.Page):
-    # إعدادات الصفحة
     page.title = "نظام مكتب الأصالة للهندسة"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.rtl = True 
-    page.scroll = ft.ScrollMode.AUTO
+    page.rtl = True
+    page.padding = 20
     
+    # دالة معالجة الأخطاء (بقينا عليها للأمان)
     def handle_exception():
         error_details = traceback.format_exc()
         page.clean()
-        page.add(
-            ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.RED, size=50),
-                    ft.Text("خطأ في الواجهة:", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.RED),
-                    ft.Text(error_details, color=ft.Colors.ORANGE_900, selectable=True, size=12),
-                ], scroll=ft.ScrollMode.ALWAYS),
-                padding=20
-            )
-        )
+        page.add(ft.Text(f"خطأ: {error_details}", color="red"))
 
     try:
-        # --- واجهة المكتب باستخدام التنسيق المبسط ---
-        
-        # استبدلنا ft.alignment.CENTER بـ "center" مباشرة كـ String
-        header = ft.Container(
-            content=ft.Column([
-                ft.Text("مكتب الأصالة للهندسة", size=30, weight="bold", color="blue900"),
-                ft.Text("نظام إدارة المشاريع والمخازن", size=16, color="blue700"),
-            ], horizontal_alignment="center"),
-            margin=ft.margin.only(bottom=20),
-            alignment=ft.Alignment(0, 0) # هذه هي الطريقة الرياضية للمركز (0,0) وهي مضمونة 100%
+        # --- قسم الجرد (Inventory) ---
+        inventory_view = ft.Column([
+            ft.Text("قائمة الجرد الهندسي", size=20, weight="bold"),
+            ft.DataTable(
+                columns=[
+                    ft.DataColumn(ft.Text("المادة")),
+                    ft.DataColumn(ft.Text("الكمية")),
+                    ft.DataColumn(ft.Text("الحالة")),
+                ],
+                rows=[
+                    ft.DataRow(cells=[ft.DataCell(ft.Text("AVR Card")), ft.DataCell(ft.Text("5")), ft.DataCell(ft.Text("متوفر"))]),
+                    ft.DataRow(cells=[ft.DataCell(ft.Text("ESP32")), ft.DataCell(ft.Text("12")), ft.DataCell(ft.Text("قيد الاستخدام"))]),
+                ],
+            ),
+            ft.FloatingActionButton(icon=ft.Icons.ADD, text="إضافة مادة للجرد")
+        ], visible=True)
+
+        # --- قسم الاستعلام (Query) ---
+        query_view = ft.Column([
+            ft.Text("نظام الاستعلام عن المشاريع", size=20, weight="bold"),
+            ft.TextField(label="أدخل رقم المشروع أو اسم الطالب", prefix_icon=ft.Icons.SEARCH),
+            ft.ElevatedButton("بحث سريع", icon=ft.Icons.SEARCH_SHARP),
+            ft.Card(
+                content=ft.Container(
+                    content=ft.Column([
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.ENGINEERING),
+                            title=ft.Text("آخر الاستعلامات"),
+                            subtitle=ft.Text("لا يوجد بيانات لعرضها حالياً"),
+                        ),
+                    ]), padding=10
+                )
+            )
+        ], visible=False)
+
+        # --- قسم الإعدادات / الأقسام الأخرى ---
+        settings_view = ft.Column([
+            ft.Text("إدارة الأقسام", size=20, weight="bold"),
+            ft.ListTile(leading=ft.Icon(ft.Icons.PERSON), title=ft.Text("بيانات المهندسين")),
+            ft.ListTile(leading=ft.Icon(ft.Icons.FILE_COPY), title=ft.Text("تقارير البحوث")),
+        ], visible=False)
+
+        # دالة التنقل بين الأقسام
+        def navigate(e):
+            inventory_view.visible = (e.control.selected_index == 0)
+            query_view.visible = (e.control.selected_index == 1)
+            settings_view.visible = (e.control.selected_index == 2)
+            page.update()
+
+        # شريط التنقل السفلي
+        page.navigation_bar = ft.NavigationBar(
+            destinations=[
+                ft.NavigationDestination(icon=ft.Icons.INVENTORY_2, label="الجرد"),
+                ft.NavigationDestination(icon=ft.Icons.QUERY_STATS, label="استعلام"),
+                ft.NavigationDestination(icon=ft.Icons.SETTINGS, label="الأقسام"),
+            ],
+            on_change=navigate,
         )
 
-        menu_buttons = ft.Column([
-            ft.ElevatedButton("إدارة المكونات الإلكترونية", icon=ft.Icons.ELECTRICAL_SERVICES, width=300),
-            ft.ElevatedButton("مشاريع الطلاب والبحوث", icon=ft.Icons.SCHOOL, width=300),
-            ft.ElevatedButton("قسم التصميم الهندسي", icon=ft.Icons.DESIGN_SERVICES, width=300),
-        ], spacing=15, horizontal_alignment="center")
-
+        # إضافة جميع الواجهات للصفحة
         page.add(
             ft.Column([
-                header,
-                ft.Divider(),
-                menu_buttons,
-                ft.Container(height=40),
-                ft.Text("الموصل - نينوى | 2026", size=12, color="grey600")
-            ], horizontal_alignment="center")
+                ft.Row([
+                    ft.Icon(ft.Icons.PRECISION_MANUFACTURING, color="blue900"),
+                    ft.Text("مكتب الأصالة للهندسة", size=25, weight="bold", color="blue900"),
+                ], alignment="center"),
+                ft.Divider(height=20, color="transparent"),
+                inventory_view,
+                query_view,
+                settings_view
+            ])
         )
 
     except Exception:
