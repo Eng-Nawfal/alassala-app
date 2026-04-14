@@ -28,13 +28,8 @@ jobs:
 
       - name: Build APK
         run: |
-          # تنظيف أي ملفات مؤقتة قديمة قد تسبب تعارضاً
-          rm -rf build/
-          rm -rf .flet/
-          
-          # أمر البناء المباشر مع الصلاحيات وتخطي الأسئلة
-          # لاحظ أننا أزلنا أمر "flet create" لتجنب مسح كودك الأصلي
-          yes y | flet build apk --permissions INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE --verbose
+          # تنفيذ البناء مع الصلاحيات الصحيحة تقنياً لنظام أندرويد
+          flet build apk --yes --android-permissions android.permission.INTERNET,android.permission.WRITE_EXTERNAL_STORAGE,android.permission.READ_EXTERNAL_STORAGE --verbose
 
       - name: Upload APK
         if: success()
